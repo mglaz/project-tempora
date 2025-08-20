@@ -1,36 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from './components/ui/Button';
-// Temporarily using simplified EventCreate without Firebase
-// import { EventCreate } from './pages/EventCreate';
+import { EventCreate } from './pages/EventCreate';
+import { EventParticipate } from './pages/EventParticipate';
+
+type Route = 'home' | 'create' | 'event';
 
 function App() {
-  const [currentView, setCurrentView] = useState<'home' | 'create'>('home');
+  const [currentRoute, setCurrentRoute] = useState<Route>('home');
+  const [eventId, setEventId] = useState<string | null>(null);
 
-  if (currentView === 'create') {
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="container mx-auto px-4 max-w-2xl">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Create New Event</h1>
-            <p className="text-gray-600">Demo form - Firebase integration needed for full functionality</p>
-          </div>
-          <div className="bg-white rounded-2xl shadow-sm p-8">
-            <p className="text-gray-600 mb-4">Event creation form would go here.</p>
-            <p className="text-sm text-gray-500 mb-6">
-              The full EventCreate component requires Firebase configuration to work properly.
-            </p>
-            <Button 
-              onClick={() => setCurrentView('home')}
-              variant="outline"
-            >
-              Back to Home
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+  // Handle URL routing
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path.startsWith('/event/')) {
+      const id = path.split('/event/')[1];
+      setEventId(id);
+      setCurrentRoute('event');
+    } else if (path === '/create') {
+      setCurrentRoute('create');
+    } else {
+      setCurrentRoute('home');
+    }
+  }, []);
+
+  const navigateTo = (route: Route, id?: string) => {
+    if (route === 'event' && id) {
+      window.history.pushState({}, '', `/event/${id}`);
+      setEventId(id);
+    } else if (route === 'create') {
+      window.history.pushState({}, '', '/create');
+    } else {
+      window.history.pushState({}, '', '/');
+    }
+    setCurrentRoute(route);
+  };
+
+  // Handle browser back button
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path.startsWith('/event/')) {
+        const id = path.split('/event/')[1];
+        setEventId(id);
+        setCurrentRoute('event');
+      } else if (path === '/create') {
+        setCurrentRoute('create');
+      } else {
+        setCurrentRoute('home');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Render based on current route
+  if (currentRoute === 'create') {
+    return <EventCreate />;
   }
 
+  if (currentRoute === 'event' && eventId) {
+    return <EventParticipate eventId={eventId} />;
+  }
+
+  // Home page
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
@@ -57,7 +90,7 @@ function App() {
                 Set up a new scheduling event and get a shareable link for participants.
               </p>
               <Button
-                onClick={() => setCurrentView('create')}
+                onClick={() => navigateTo('create')}
                 className="w-full"
               >
                 Create Event
@@ -78,25 +111,44 @@ function App() {
               <div className="space-y-2">
                 <input
                   type="text"
+                  id="event-link"
                   placeholder="Paste event link here..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 />
-                <button className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
+                <button 
+                  onClick={() => {
+                    const input = document.getElementById('event-link') as HTMLInputElement;
+                    const link = input.value;
+                    // Extract event ID from link
+                    const match = link.match(/\/event\/([a-zA-Z0-9]+)/);
+                    if (match) {
+                      navigateTo('event', match[1]);
+                    } else if (link.length > 0) {
+                      // Try using the input as event ID directly
+                      navigateTo('event', link);
+                    }
+                  }}
+                  className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
+                >
                   Join Event
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Status */}
-          <div className="bg-gray-50 rounded-lg p-6">
-            <h3 className="font-semibold text-gray-700 mb-4">🚀 Basic App Working!</h3>
-            <div className="text-sm text-gray-600">
-              <p className="mb-2">✅ React is working</p>
-              <p className="mb-2">✅ Tailwind CSS is working</p>
-              <p className="mb-2">✅ Basic routing is working</p>
-              <p>🔄 Ready to add back complex components</p>
-            </div>
+          {/* Demo Event for Testing */}
+          <div className="bg-yellow-50 rounded-lg p-6 border border-yellow-200">
+            <h3 className="font-semibold text-gray-700 mb-2">🧪 Test the App</h3>
+            <p className="text-sm text-gray-600 mb-3">
+              Want to test the app without Firebase? Try our demo event:
+            </p>
+            <Button
+              onClick={() => navigateTo('event', 'demo-event-123')}
+              variant="outline"
+              size="sm"
+            >
+              Open Demo Event
+            </Button>
           </div>
         </div>
       </div>
